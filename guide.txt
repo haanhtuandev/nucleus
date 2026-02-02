@@ -1,0 +1,11 @@
+cmd/
+    appname/        # main package(s)
+internal/
+    http/           # handlers, routing, middlewares
+    database/       # sqlc or other DB layer
+    auth/           # JWT, sessions, etc.
+    config/         # env loading, config structs
+pkg/                # optional: reusable libs
+sql/
+    schema/         # migrations (goose)
+    queries/        # sqlc queries
