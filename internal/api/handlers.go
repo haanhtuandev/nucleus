@@ -23,27 +23,30 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 	type params struct {
-		Username string         `json:"username"`
-		Bio      sql.NullString `json:"bio"`
+		Username string  `json:"username"`
+		Bio      *string `json:"bio"`
 	}
 	param := params{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&param)
-	if err != nil {
-		respondWithError(w, 500, "error decoding json", err)
-	}
-	if param.Bio.Valid {
-		user, err := a.Database.CreateUser(r.Context(), database.CreateUserParams{Username: param.Username, Bio: param.Bio})
-		if err != nil {
-			respondWithError(w, 500, "error in database operation", err)
-		}
-		respondWithJSON(w, 201, user)
-	} else {
-		user, err := a.Database.CreateUser(r.Context(), database.CreateUserParams{Username: param.Username})
-		if err != nil {
-			respondWithError(w, 500, "error creating user", err)
-		}
-		respondWithJSON(w, 201, user)
+	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+		// 400 because client send bad json
+		respondWithError(w, 400, "Invalid request payload", err)
+		return
 	}
 
+	dbParams := database.CreateUserParams{
+		Username: param.Username,
+	}
+
+	if param.Bio != nil {
+		dbParams.Bio = sql.NullString{String: *param.Bio, Valid: true}
+	} else {
+		dbParams.Bio = sql.NullString{Valid: false}
+	}
+
+	user, err := a.Database.CreateUser(r.Context(), dbParams)
+	if err != nil {
+		respondWithError(w, 500, "Couldn't create user", err)
+		return
+	}
+	respondWithJSON(w, 201, user)
 }
