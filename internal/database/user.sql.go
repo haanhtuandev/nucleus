@@ -7,20 +7,28 @@ package database
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, created_at, updated_at)
+INSERT INTO users (id, username, bio, created_at, updated_at)
 VALUES (
     gen_random_uuid(),
+    $1,
+    $2,
     NOW(),
     NOW()
 )
 RETURNING id, username, bio, created_at, updated_at
 `
 
-func (q *Queries) CreateUser(ctx context.Context) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser)
+type CreateUserParams struct {
+	Username string
+	Bio      sql.NullString
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser, arg.Username, arg.Bio)
 	var i User
 	err := row.Scan(
 		&i.ID,
