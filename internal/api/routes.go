@@ -16,9 +16,10 @@ func NewHandler(a *ApiConfig) http.Handler {
 	mux.HandleFunc("POST /posts", a.addPostHandler)
 	mux.HandleFunc("GET /users", a.getAllUsersHandler)
 	mux.HandleFunc("GET /posts", a.getAllPostsHandler)
-	mux.HandleFunc("GET /posts/{post_id}", a.getPostByIdHandler)
+	mux.HandleFunc("GET /posts/{slug}", a.getPostBySlugHandler)
 	mux.HandleFunc("GET /users/{user_id}", a.getUserByIdHandler)
 	mux.HandleFunc("GET /api/refresh", a.refreshHandler)
+	mux.HandleFunc("DELETE /posts/{post_id}", a.deletePostHandler)
 
 	return mux
 }

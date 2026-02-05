@@ -17,6 +17,9 @@ type Post struct {
 	UserID    uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	DeletedAt sql.NullTime
+	Title     string
+	Slug      string
 }
 
 type User struct {

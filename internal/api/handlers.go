@@ -4,6 +4,7 @@ import (
 	"boilerplate/internal/database"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -55,8 +56,9 @@ func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *ApiConfig) addPostHandler(w http.ResponseWriter, r *http.Request) {
 	type params struct {
-		UserID  uuid.UUID `json:"user_id"`
+		Title   string    `json:"title"`
 		Content string    `json:"content"`
+		UserID  uuid.UUID `json:"user_id"`
 	}
 	param := params{}
 	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
@@ -65,17 +67,30 @@ func (a *ApiConfig) addPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbParams := database.CreatePostParams{
-		Content: param.Content,
-		UserID:  param.UserID,
-	}
+	slug := cleanTitle(param.Title)
 
-	post, err := a.Database.CreatePost(r.Context(), dbParams)
-	if err != nil {
-		respondWithError(w, 500, "Couldn't create post", err)
+	for i := 0; i < 5; i++ {
+		dbParams := database.CreatePostParams{
+			Content: param.Content,
+			Title:   param.Title,
+			UserID:  param.UserID,
+			Slug:    slug,
+		}
+		post, err := a.Database.CreatePost(r.Context(), dbParams)
+
+		if err == nil {
+			respondWithJSON(w, 201, post)
+			return
+		}
+
+		if isUniqueViolation(err) {
+			slug = fmt.Sprintf("%s-%s", slug, generateRandomString(5))
+			continue
+		}
+
+		respondWithError(w, 500, "DB Error", err)
 		return
 	}
-	respondWithJSON(w, 201, post)
 }
 
 func (a *ApiConfig) getAllUsersHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,15 +111,26 @@ func (a *ApiConfig) getAllPostsHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, 201, posts)
 }
 
-func (a *ApiConfig) getPostByIdHandler(w http.ResponseWriter, r *http.Request) {
-	post_id := r.PathValue("post_id")
-	parsed_post_id, err := uuid.Parse(post_id)
-	if err != nil {
-		respondWithError(w, 500, "Error converting post ID", err)
-		return
-	}
+// func (a *ApiConfig) getPostByIdHandler(w http.ResponseWriter, r *http.Request) {
+// 	post_id := r.PathValue("post_id")
+// 	parsed_post_id, err := uuid.Parse(post_id)
+// 	if err != nil {
+// 		respondWithError(w, 500, "Error converting post ID", err)
+// 		return
+// 	}
 
-	post, err := a.Database.GetPostById(r.Context(), parsed_post_id)
+// 	post, err := a.Database.GetPostById(r.Context(), parsed_post_id)
+// 	if err != nil {
+// 		respondWithError(w, 500, "Error while finding post", err)
+// 		return
+// 	}
+
+//		respondWithJSON(w, 201, post)
+//	}
+func (a *ApiConfig) getPostBySlugHandler(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+
+	post, err := a.Database.GetPostBySlug(r.Context(), slug)
 	if err != nil {
 		respondWithError(w, 500, "Error while finding post", err)
 		return
@@ -133,6 +159,21 @@ func (a *ApiConfig) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	err := a.Database.RefreshDB(r.Context())
 	if err != nil {
 		respondWithError(w, 500, "Error clearing database", err)
+		return
+	}
+	respondWithJSON(w, 201, nil)
+}
+
+func (a *ApiConfig) deletePostHandler(w http.ResponseWriter, r *http.Request) {
+	post_id := r.PathValue("post_id")
+	parsed_post_id, err := uuid.Parse(post_id)
+	if err != nil {
+		respondWithError(w, 400, "Unable to parse ID", err)
+		return
+	}
+	err = a.Database.DeletePost(r.Context(), parsed_post_id)
+	if err != nil {
+		respondWithError(w, 500, "Couldn't delete post", err)
 		return
 	}
 	respondWithJSON(w, 201, nil)

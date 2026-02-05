@@ -12,24 +12,34 @@ import (
 )
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (id, content, user_id, created_at, updated_at)
+INSERT INTO posts (id, title, content, user_id, slug, created_at, updated_at, deleted_at)
 VALUES (
     gen_random_uuid(),
     $1,
     $2,
+    $3,
+    $4,
     NOW(),
-    NOW()
+    NOW(),
+    NULL
 )
-RETURNING id, content, user_id, created_at, updated_at
+RETURNING id, content, user_id, created_at, updated_at, deleted_at, title, slug
 `
 
 type CreatePostParams struct {
+	Title   string
 	Content string
 	UserID  uuid.UUID
+	Slug    string
 }
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
-	row := q.db.QueryRowContext(ctx, createPost, arg.Content, arg.UserID)
+	row := q.db.QueryRowContext(ctx, createPost,
+		arg.Title,
+		arg.Content,
+		arg.UserID,
+		arg.Slug,
+	)
 	var i Post
 	err := row.Scan(
 		&i.ID,
@@ -37,12 +47,26 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.UserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Title,
+		&i.Slug,
 	)
 	return i, err
 }
 
+const deletePost = `-- name: DeletePost :exec
+UPDATE posts
+SET deleted_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deletePost, id)
+	return err
+}
+
 const getAllPosts = `-- name: GetAllPosts :many
-SELECT id, content, user_id, created_at, updated_at FROM posts
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug FROM posts WHERE deleted_at is NULL
 `
 
 func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
@@ -60,6 +84,9 @@ func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 			&i.UserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Title,
+			&i.Slug,
 		); err != nil {
 			return nil, err
 		}
@@ -75,7 +102,7 @@ func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 }
 
 const getPostById = `-- name: GetPostById :one
-SELECT id, content, user_id, created_at, updated_at FROM posts WHERE id = $1
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug FROM posts WHERE id = $1 AND deleted_at is NULL
 `
 
 func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
@@ -87,6 +114,40 @@ func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
 		&i.UserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Title,
+		&i.Slug,
 	)
 	return i, err
+}
+
+const getPostBySlug = `-- name: GetPostBySlug :one
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug FROM posts WHERE slug = $1 AND deleted_at is NULL
+`
+
+func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (Post, error) {
+	row := q.db.QueryRowContext(ctx, getPostBySlug, slug)
+	var i Post
+	err := row.Scan(
+		&i.ID,
+		&i.Content,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Title,
+		&i.Slug,
+	)
+	return i, err
+}
+
+const lookUpSlug = `-- name: LookUpSlug :one
+SELECT COUNT(*) from posts WHERE slug = $1
+`
+
+func (q *Queries) LookUpSlug(ctx context.Context, slug string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, lookUpSlug, slug)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
