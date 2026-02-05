@@ -9,3 +9,13 @@ pkg/                # optional: reusable libs
 sql/
     schema/         # migrations (goose)
     queries/        # sqlc queries
+
+
+
+
+curl -X POST http://localhost:8080/posts \
+-H "Content-Type: application/json" \
+-d '{
+  "user_id": "c71d26d0-35ff-4d95-8246-75e81abd1959",
+  "content": "if you had one shot, one opportunity, to seize everything you ever wanted, one moment, woul dyou capture it? or let it slips"
+}'
