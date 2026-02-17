@@ -11,6 +11,7 @@ func NewHandler(a *ApiConfig) http.Handler {
 
 	mux.HandleFunc("GET /health", healthCheckHandler)
 	mux.HandleFunc("/", homePageHandler)
+	mux.HandleFunc("POST /login", a.loginHandler)
 	mux.HandleFunc("POST /users", a.addUserHandler)
 
 	mux.HandleFunc("POST /posts", a.addPostHandler)

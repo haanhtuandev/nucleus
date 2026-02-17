@@ -1,17 +1,29 @@
 package api
 
 import (
+	"boilerplate/internal/auth"
 	"boilerplate/internal/database"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 type ApiConfig struct {
 	Database *database.Queries
+	Secret   string
+}
+
+type User struct {
+	ID            uuid.UUID `json:"id"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	Username      string    `json:"username"`
+	Token         string    `json:"token"`
+	Refresh_token string    `json:"refresh_token"`
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +39,7 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 	type params struct {
 		Username string  `json:"username"`
+		Password string  `json:"password"`
 		Bio      *string `json:"bio"`
 	}
 	param := params{}
@@ -36,8 +49,15 @@ func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hashed_password, err := auth.HashPassword(param.Password)
+	if err != nil {
+		respondWithError(w, 500, "error with hash password", err)
+		return
+	}
+
 	dbParams := database.CreateUserParams{
-		Username: param.Username,
+		Username:       param.Username,
+		HashedPassword: hashed_password,
 	}
 
 	if param.Bio != nil {
@@ -47,11 +67,73 @@ func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := a.Database.CreateUser(r.Context(), dbParams)
+
 	if err != nil {
 		respondWithError(w, 500, "Couldn't create user", err)
 		return
 	}
 	respondWithJSON(w, 201, user)
+}
+
+func (a *ApiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
+	type params struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	param := params{}
+	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+		// 400 because client send bad json
+		respondWithError(w, 400, "Invalid request payload", err)
+		return
+	}
+	user, err := a.Database.GetUserByName(r.Context(), param.Username)
+	if err != nil {
+		if isUniqueViolation(err) {
+			respondWithError(w, 400, "username already exists", err)
+			return
+		} else {
+			respondWithError(w, 500, "error retrieving user", err)
+			return
+		}
+	}
+	authenticated, err := auth.CheckPasswordHash(param.Password, user.HashedPassword)
+	if !authenticated {
+		respondWithError(w, 400, "Wrong password", err)
+		return
+	}
+	if err != nil {
+		respondWithError(w, 500, "Error validating password", err)
+		return
+	}
+	refresh_token_string, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, 500, "error making refresh tokens", err)
+		return
+	}
+	refresh_token_param := database.CreateRefreshTokenParams{
+		Token:  refresh_token_string,
+		UserID: user.ID,
+	}
+	_, err = a.Database.CreateRefreshToken(r.Context(), refresh_token_param)
+
+	access_token, err := auth.MakeJWT(
+		user.ID,
+		a.Secret,
+		time.Duration(1)*time.Hour,
+	)
+	if err != nil {
+		respondWithError(w, 400, "error generating jwt token", err)
+	}
+	user_json := User{
+		ID:            user.ID,
+		CreatedAt:     user.CreatedAt,
+		UpdatedAt:     user.UpdatedAt,
+		Username:      user.Username,
+		Token:         access_token,
+		Refresh_token: refresh_token_string,
+	}
+	respondWithJSON(w, 200, user_json)
+
 }
 
 func (a *ApiConfig) addPostHandler(w http.ResponseWriter, r *http.Request) {

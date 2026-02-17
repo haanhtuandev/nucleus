@@ -6,6 +6,7 @@ content-type: application/json
 
 {
     "username": "ha anh tuan",
+    "password": "0701bini",
     "bio": "i master backend development the right way"
 }
 
@@ -44,3 +45,14 @@ DELETE http://localhost:8080/posts/e05f452b-7254-4567-b658-ac50a118c069
 
 ###
 GET http://localhost:8080/posts/how-i-balance-between-backend-development-and-getting-good-grades
+
+
+###
+POST http://localhost:8080/login
+content-type: application/json
+
+{
+    "username": "ha anh tuan",
+    "password": "0701bini"
+
+}

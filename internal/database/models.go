@@ -22,10 +22,20 @@ type Post struct {
 	Slug      string
 }
 
-type User struct {
-	ID        uuid.UUID
-	Username  string
-	Bio       sql.NullString
+type RefreshToken struct {
+	Token     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	UserID    uuid.UUID
+	ExpiresAt time.Time
+	RevokedAt sql.NullTime
+}
+
+type User struct {
+	ID             uuid.UUID
+	Username       string
+	Bio            sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	HashedPassword string
 }
