@@ -8,13 +8,12 @@ import (
 
 func NewHandler(a *ApiConfig) http.Handler {
 	mux := http.NewServeMux()
-
 	mux.HandleFunc("GET /health", healthCheckHandler)
 	mux.HandleFunc("/", homePageHandler)
 	mux.HandleFunc("POST /login", a.loginHandler)
 	mux.HandleFunc("POST /users", a.addUserHandler)
 
-	mux.HandleFunc("POST /posts", a.addPostHandler)
+	mux.Handle("POST /posts", a.authorizeMiddleware(a.addPostHandler))
 	mux.HandleFunc("GET /users", a.getAllUsersHandler)
 	mux.HandleFunc("GET /posts", a.getAllPostsHandler)
 	mux.HandleFunc("GET /posts/{slug}", a.getPostBySlugHandler)

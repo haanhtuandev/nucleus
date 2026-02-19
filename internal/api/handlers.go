@@ -5,6 +5,7 @@ import (
 	"boilerplate/internal/database"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -146,6 +147,11 @@ func (a *ApiConfig) addPostHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
 		// 400 because client send bad json
 		respondWithError(w, 400, "Invalid request payload", err)
+		return
+	}
+
+	if param.UserID != r.Context().Value("user_id") {
+		respondWithError(w, http.StatusUnauthorized, "method not allowed", errors.New("method not allowed!"))
 		return
 	}
 

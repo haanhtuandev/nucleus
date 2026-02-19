@@ -5,9 +5,9 @@ POST http://localhost:8080/users
 content-type: application/json
 
 {
-    "username": "ha anh tuan",
+    "username": "marcoha",
     "password": "0701bini",
-    "bio": "i master backend development the right way"
+    "bio": "professional AI hype hater"
 }
 
 ###
@@ -24,6 +24,16 @@ content-type: application/json
 
 {
     "user_id": "1edf05b0-9873-4314-84bc-06c894687f18",
+    "title": "How I balance between backend development and getting good grades",
+    "content": "Just attend class, you know. Just going to class and actually paying attention and interacting with the professors will give you a huge edge, you will be thankful when it's time for final revision. Spend your time in class to do the coursework, then do whatever oyu want at home"
+}
+###
+POST http://localhost:8080/posts
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiZWQwMDlmOTYtZjgyMi00ZjRhLTg4Y2EtN2UyY2I2ZjU0NGIzIiwiZXhwIjoxNzcxNTE4NDI0LCJpYXQiOjE3NzE1MTQ4MjR9.BOYpcF4Fg0szCkbO9BrTdCodR-PbgAHZJiXuF32vzCk
+
+{
+    "user_id": "ed009f96-f822-4f4a-88ca-7e2cb6f544b3",
     "title": "How I balance between backend development and getting good grades",
     "content": "Just attend class, you know. Just going to class and actually paying attention and interacting with the professors will give you a huge edge, you will be thankful when it's time for final revision. Spend your time in class to do the coursework, then do whatever oyu want at home"
 }
@@ -52,7 +62,7 @@ POST http://localhost:8080/login
 content-type: application/json
 
 {
-    "username": "ha anh tuan",
+    "username": "marcoha",
     "password": "0701bini"
 
 }

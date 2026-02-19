@@ -17,6 +17,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	dbURL := os.Getenv("DB_URL")
+	secret_key := os.Getenv("SECRET")
 
 	log.Println(dbURL)
 	db, err := sql.Open("postgres", dbURL)
@@ -25,7 +26,7 @@ func main() {
 		log.Printf("Database connection error %v", err)
 	}
 	dbQueries := database.New(db)
-	a := &api.ApiConfig{Database: dbQueries}
+	a := &api.ApiConfig{Database: dbQueries, Secret: secret_key}
 	mux := api.NewHandler(a)
 
 	server := &http.Server{
