@@ -1,7 +1,7 @@
 GET http://localhost:8080/users
 
 ###
-POST http://localhost:8080/users
+POST http://localhost:8080/signup
 content-type: application/json
 
 {
@@ -30,13 +30,28 @@ content-type: application/json
 ###
 POST http://localhost:8080/posts
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiZWQwMDlmOTYtZjgyMi00ZjRhLTg4Y2EtN2UyY2I2ZjU0NGIzIiwiZXhwIjoxNzcxNTE4NDI0LCJpYXQiOjE3NzE1MTQ4MjR9.BOYpcF4Fg0szCkbO9BrTdCodR-PbgAHZJiXuF32vzCk
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjUxMjMyLCJpYXQiOjE3NzE2NDc2MzJ9.Fnb-ZDMY5gIX8DUAGO9DaM3cYJqANmjbZzu4gmiYTHU
 
 {
-    "user_id": "ed009f96-f822-4f4a-88ca-7e2cb6f544b3",
-    "title": "How I balance between backend development and getting good grades",
-    "content": "Just attend class, you know. Just going to class and actually paying attention and interacting with the professors will give you a huge edge, you will be thankful when it's time for final revision. Spend your time in class to do the coursework, then do whatever oyu want at home"
+    "user_id": "65018b13-a141-4510-8c36-9158fd58c4be",
+    "title": "Post for hatuan",
+    "content": "akasdjaklsdjaksjdlasjd"
 }
+
+###
+PUT http://localhost:8080/posts/e0184550-2e07-42be-bc4f-1ca2fef9776b
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjUxMjMyLCJpYXQiOjE3NzE2NDc2MzJ9.Fnb-ZDMY5gIX8DUAGO9DaM3cYJqANmjbZzu4gmiYTHU
+
+{
+    "title": "New title",
+    "content": "Newwwwwwwwww contentttttttttttttt"
+}
+
+###
+GET http://localhost:8080/profile
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjYzMTYwLCJpYXQiOjE3NzE2NTk1NjB9.PbzNJwHeTyErqrZ0sLOnzp425a3cLAt6X23NNccdvDA
 
 ###
 GET http://localhost:8080/api/refresh
@@ -51,7 +66,8 @@ GET http://localhost:8080/posts/e05f452b-7254-4567-b658-ac50a118c069
 GET http://localhost:8080/posts/e05f452b-7254-4567-b658-ac50a118c061
 
 ###
-DELETE http://localhost:8080/posts/e05f452b-7254-4567-b658-ac50a118c069
+DELETE http://localhost:8080/posts/06fb2091-4aba-4a1b-b9c8-b4847423b366
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjYzMTYwLCJpYXQiOjE3NzE2NTk1NjB9.PbzNJwHeTyErqrZ0sLOnzp425a3cLAt6X23NNccdvDA
 
 ###
 GET http://localhost:8080/posts/how-i-balance-between-backend-development-and-getting-good-grades
@@ -62,7 +78,7 @@ POST http://localhost:8080/login
 content-type: application/json
 
 {
-    "username": "marcoha",
+    "username": "hatuan",
     "password": "0701bini"
 
 }

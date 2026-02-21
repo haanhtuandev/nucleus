@@ -1,9 +1,12 @@
 package api
 
 import (
+	"context"
+	"errors"
 	"math/rand/v2"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
@@ -28,4 +31,13 @@ func isUniqueViolation(err error) bool {
 		return pqErr.Code == "23505"
 	}
 	return false
+}
+
+func GetUserID(ctx context.Context) (uuid.UUID, error) {
+	val := ctx.Value(userIDKey)
+	id, ok := val.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, errors.New("user_id not found in context")
+	}
+	return id, nil
 }

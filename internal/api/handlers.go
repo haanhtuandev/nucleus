@@ -70,6 +70,10 @@ func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := a.Database.CreateUser(r.Context(), dbParams)
 
 	if err != nil {
+		if isUniqueViolation(err) {
+			respondWithError(w, 400, "Username already exists", err)
+			return
+		}
 		respondWithError(w, 500, "Couldn't create user", err)
 		return
 	}
@@ -150,7 +154,12 @@ func (a *ApiConfig) addPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if param.UserID != r.Context().Value("user_id") {
+	user_id, err := GetUserID(r.Context())
+	if err != nil {
+		respondWithError(w, 500, "wrong user_id format", err)
+		return
+	}
+	if param.UserID != user_id {
 		respondWithError(w, http.StatusUnauthorized, "method not allowed", errors.New("method not allowed!"))
 		return
 	}
@@ -243,6 +252,86 @@ func (a *ApiConfig) getUserByIdHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, 201, user)
 }
 
+func (a *ApiConfig) getProfile(w http.ResponseWriter, r *http.Request) {
+	user_id, err := GetUserID(r.Context())
+	if err != nil {
+		respondWithError(w, 500, "error getting user ID from context", err)
+		return
+	}
+	user, err := a.Database.GetUserById(r.Context(), user_id)
+	if err != nil {
+		respondWithError(w, 500, "error retrieving user", err)
+		return
+	}
+	posts, err := a.Database.GetPostsByUser(r.Context(), user_id)
+	if err != nil {
+		respondWithError(w, 500, "error retrieving posts", err)
+		return
+	}
+
+	type profileVal struct {
+		Username      string
+		PostsMetadata []database.GetPostsByUserRow
+		PostCount     int
+	}
+
+	returnVal := profileVal{
+		Username:      user.Username,
+		PostsMetadata: posts,
+		PostCount:     len(posts),
+	}
+	respondWithJSON(w, 200, returnVal)
+}
+
+func (a *ApiConfig) updatePostHandler(w http.ResponseWriter, r *http.Request) {
+	post_id := r.PathValue("post_id")
+	parsed_post_id, err := uuid.Parse(post_id)
+	if err != nil {
+		respondWithError(w, 400, "Unable to parse ID", err)
+		return
+	}
+	owner_id, err := GetUserID(r.Context())
+	if err != nil {
+		respondWithError(w, 500, "Error retrieving user_id", err)
+		return
+	}
+	post, err := a.Database.GetPostById(r.Context(), parsed_post_id)
+	if err != nil {
+		respondWithError(w, 500, "Error retrieving post by id", err)
+		return
+	}
+	// authorization check
+	if post.UserID != owner_id {
+		respondWithError(w, http.StatusUnauthorized, "method not allowed", err)
+		return
+	}
+	// input params
+	type params struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+	param := params{}
+	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+		// 400 because client send bad json
+		respondWithError(w, 400, "Invalid request payload", err)
+		return
+	}
+
+	// update logic
+	update_params := database.UpdatePostInfoParams{
+		Title:   param.Title,
+		Content: param.Content,
+		ID:      parsed_post_id,
+	}
+	err = a.Database.UpdatePostInfo(r.Context(), update_params)
+	if err != nil {
+		respondWithError(w, 500, "error updating post info", err)
+		return
+	}
+	respondWithJSON(w, 200, nil)
+
+}
+
 func (a *ApiConfig) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	err := a.Database.RefreshDB(r.Context())
 	if err != nil {
@@ -257,6 +346,21 @@ func (a *ApiConfig) deletePostHandler(w http.ResponseWriter, r *http.Request) {
 	parsed_post_id, err := uuid.Parse(post_id)
 	if err != nil {
 		respondWithError(w, 400, "Unable to parse ID", err)
+		return
+	}
+	owner_id, err := GetUserID(r.Context())
+	if err != nil {
+		respondWithError(w, 500, "Error retrieving user_id", err)
+		return
+	}
+	post, err := a.Database.GetPostById(r.Context(), parsed_post_id)
+	if err != nil {
+		respondWithError(w, 500, "Error retrieving post by id", err)
+		return
+	}
+	// authorization check
+	if post.UserID != owner_id {
+		respondWithError(w, http.StatusUnauthorized, "method not allowed", err)
 		return
 	}
 	err = a.Database.DeletePost(r.Context(), parsed_post_id)

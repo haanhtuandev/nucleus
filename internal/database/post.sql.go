@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -141,6 +142,45 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (Post, error) 
 	return i, err
 }
 
+const getPostsByUser = `-- name: GetPostsByUser :many
+SELECT posts.id, title, posts.created_at, posts.updated_at FROM posts JOIN users ON posts.user_id = users.id WHERE deleted_at is NULL AND posts.user_id = $1
+`
+
+type GetPostsByUserRow struct {
+	ID        uuid.UUID
+	Title     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (q *Queries) GetPostsByUser(ctx context.Context, userID uuid.UUID) ([]GetPostsByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPostsByUserRow
+	for rows.Next() {
+		var i GetPostsByUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lookUpSlug = `-- name: LookUpSlug :one
 SELECT COUNT(*) from posts WHERE slug = $1
 `
@@ -150,4 +190,21 @@ func (q *Queries) LookUpSlug(ctx context.Context, slug string) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const updatePostInfo = `-- name: UpdatePostInfo :exec
+UPDATE posts
+SET title = $1, content = $2, updated_at = NOW()
+WHERE id = $3
+`
+
+type UpdatePostInfoParams struct {
+	Title   string
+	Content string
+	ID      uuid.UUID
+}
+
+func (q *Queries) UpdatePostInfo(ctx context.Context, arg UpdatePostInfoParams) error {
+	_, err := q.db.ExecContext(ctx, updatePostInfo, arg.Title, arg.Content, arg.ID)
+	return err
 }

@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+type ctxKey int
+
+const userIDKey ctxKey = iota
+
 func (a *ApiConfig) authorizeMiddleware(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := auth.GetBearerToken(r.Header)
@@ -18,7 +22,7 @@ func (a *ApiConfig) authorizeMiddleware(next http.HandlerFunc) http.Handler {
 			respondWithError(w, http.StatusUnauthorized, "error validating jwt", err)
 			return
 		}
-		ctx := context.WithValue(r.Context(), "user_id", user_id)
+		ctx := context.WithValue(r.Context(), userIDKey, user_id)
 		next(w, r.WithContext(ctx))
 	})
 }
