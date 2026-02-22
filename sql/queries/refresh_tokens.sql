@@ -12,8 +12,7 @@ RETURNING *;
 
 
 -- name: GetUserFromRefreshToken :one
-SELECT * FROM users JOIN refresh_tokens r ON id = r.user_id
-WHERE r.token = $1;
+SELECT user_id, expires_at, revoked_at  FROM refresh_tokens WHERE token = $1;
 
 -- name: GetRefreshTokenByToken :one
 SELECT * FROM refresh_tokens WHERE token = $1;

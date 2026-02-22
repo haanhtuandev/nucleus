@@ -35,7 +35,7 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		return []byte(tokenSecret), nil
 	})
 	if err != nil {
-		return uuid.UUID{}, errors.New("error parsing with claims")
+		return uuid.UUID{}, errors.New("token tampered or expired")
 	}
 	user_id, err := uuid.Parse(claims.Subject)
 	if err != nil {

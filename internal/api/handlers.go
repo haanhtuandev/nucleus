@@ -332,13 +332,78 @@ func (a *ApiConfig) updatePostHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (a *ApiConfig) refreshHandler(w http.ResponseWriter, r *http.Request) {
+func (a *ApiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 	err := a.Database.RefreshDB(r.Context())
 	if err != nil {
 		respondWithError(w, 500, "Error clearing database", err)
 		return
 	}
 	respondWithJSON(w, 201, nil)
+}
+
+func (a *ApiConfig) refreshHandler(w http.ResponseWriter, r *http.Request) {
+	type params struct {
+		Refresh_token string `json:"refresh_token"`
+	}
+	param := params{}
+	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+		respondWithError(w, 400, "Invalid request payload", err)
+		return
+	}
+
+	token_info, err := a.Database.GetUserFromRefreshToken(r.Context(), param.Refresh_token)
+	if err != nil {
+		respondWithError(w, 500, "error retrieving token", err)
+		return
+	}
+	if token_info.ExpiresAt.Before(time.Now().UTC()) || token_info.RevokedAt.Valid {
+		respondWithError(w, http.StatusUnauthorized, "refresh token expired or revoked", nil)
+		return
+	}
+	user_id := token_info.UserID
+
+	new_token, err := auth.MakeJWT(user_id, a.Secret, time.Duration(1)*time.Hour)
+	if err != nil {
+		respondWithError(w, 500, "error making new jwt token", err)
+		return
+	}
+
+	err = a.Database.RevokeToken(r.Context(), param.Refresh_token)
+	if err != nil {
+		respondWithError(w, 401, "something is wrong with revoking", err)
+		return
+	}
+	new_refresh_token, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, 500, "error making new refresh token", err)
+		return
+	}
+	_, err = a.Database.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:  new_refresh_token,
+		UserID: user_id,
+	})
+
+	type returnVal struct {
+		Token         string `json:"token"`
+		Refresh_token string `json:"refresh_token"`
+	}
+
+	respondWithJSON(w, 201, returnVal{Token: new_token, Refresh_token: new_refresh_token})
+}
+
+func (a *ApiConfig) RevokeHandler(w http.ResponseWriter, r *http.Request) {
+	refresh_token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "no refresh token found", err)
+		return
+	}
+	err = a.Database.RevokeToken(r.Context(), refresh_token)
+	if err != nil {
+		respondWithError(w, 401, "something is wrong with revoking", err)
+		return
+	}
+	respondWithJSON(w, 204, nil)
+
 }
 
 func (a *ApiConfig) deletePostHandler(w http.ResponseWriter, r *http.Request) {
