@@ -5,9 +5,9 @@ POST http://localhost:8080/signup
 content-type: application/json
 
 {
-    "username": "marcoha",
-    "password": "0701bini",
-    "bio": "professional AI hype hater"
+    "username": "stoicdev",
+    "password": "12345678",
+    "bio": "i learn for the art of the craft"
 }
 
 ###
@@ -19,8 +19,9 @@ content-type: application/json
     "bio": "i am a stoic mastering the craft of proper software engineering"
 }
 ###
-POST http://localhost:8080/posts
+POST http://localhost:8080/me/posts
 content-type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiZDA1MGNiZjktMTU2MS00YjM0LWI0NzMtMTc2NjRkODc4MzhjIiwiZXhwIjoxNzcxNzQwOTQ2LCJpYXQiOjE3NzE3MzczNDZ9.R3TxUaYAz8vyhv-SnS82SY_stW5CPxcytvHQrdHDRAE
 
 {
     "user_id": "1edf05b0-9873-4314-84bc-06c894687f18",
@@ -28,14 +29,13 @@ content-type: application/json
     "content": "Just attend class, you know. Just going to class and actually paying attention and interacting with the professors will give you a huge edge, you will be thankful when it's time for final revision. Spend your time in class to do the coursework, then do whatever oyu want at home"
 }
 ###
-POST http://localhost:8080/posts
+POST http://localhost:8080/me/posts
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjUxMjMyLCJpYXQiOjE3NzE2NDc2MzJ9.Fnb-ZDMY5gIX8DUAGO9DaM3cYJqANmjbZzu4gmiYTHU
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiMDgyZDkxYjItNmQwNS00ODk0LWIxMjQtMWEyNzlhODNiMTg4IiwiZXhwIjoxNzcxODIyOTczLCJpYXQiOjE3NzE4MTkzNzN9.AFx5tAdysF8qEsepY855XVfiS1DMf2nz7-2A3509mWM
 
 {
-    "user_id": "65018b13-a141-4510-8c36-9158fd58c4be",
-    "title": "Post for hatuan",
-    "content": "akasdjaklsdjaksjdlasjd"
+    "title": "Title 11",
+    "content": "Content 11"
 }
 
 ###
@@ -49,15 +49,15 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1Y
 }
 
 ###
-GET http://localhost:8080/profile
+GET http://localhost:8080/me/profile?page=2&limit=5
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjYzMTYwLCJpYXQiOjE3NzE2NTk1NjB9.PbzNJwHeTyErqrZ0sLOnzp425a3cLAt6X23NNccdvDA
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiMDgyZDkxYjItNmQwNS00ODk0LWIxMjQtMWEyNzlhODNiMTg4IiwiZXhwIjoxNzcxODIyOTczLCJpYXQiOjE3NzE4MTkzNzN9.AFx5tAdysF8qEsepY855XVfiS1DMf2nz7-2A3509mWM
 
 ###
-GET http://localhost:8080/api/refresh
+GET http://localhost:8080/api/reset
 
 ###
-GET http://localhost:8080/posts
+GET http://localhost:8080/posts?page=10000&limit=1000000
 
 ###
 GET http://localhost:8080/posts/e05f452b-7254-4567-b658-ac50a118c069
@@ -70,7 +70,7 @@ DELETE http://localhost:8080/posts/06fb2091-4aba-4a1b-b9c8-b4847423b366
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjYzMTYwLCJpYXQiOjE3NzE2NTk1NjB9.PbzNJwHeTyErqrZ0sLOnzp425a3cLAt6X23NNccdvDA
 
 ###
-GET http://localhost:8080/posts/how-i-balance-between-backend-development-and-getting-good-grades
+GET http://localhost:8080/posts/title-9
 
 
 ###
@@ -78,7 +78,15 @@ POST http://localhost:8080/login
 content-type: application/json
 
 {
-    "username": "hatuan",
-    "password": "0701bini"
+    "username": "stoicdev",
+    "password": "12345678"
 
+}
+
+###
+POST http://localhost:8080/auth/refresh
+Content-Type: application/json
+
+{
+    refresh_token: 
 }

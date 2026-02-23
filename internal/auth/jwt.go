@@ -47,7 +47,7 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 
 func GetBearerToken(headers http.Header) (string, error) {
 	bearer_string := headers.Get("Authorization")
-	reg := regexp.MustCompile("\\s+")
+	reg := regexp.MustCompile(`\s+`)
 	bearer_string = reg.ReplaceAllString(bearer_string, "")
 	bearer_string = strings.TrimPrefix(bearer_string, "Bearer")
 	if bearer_string == "" {

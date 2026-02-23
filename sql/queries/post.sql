@@ -32,9 +32,24 @@ SELECT * FROM posts WHERE slug = $1 AND deleted_at is NULL;
 SELECT COUNT(*) from posts WHERE slug = $1;
 
 -- name: GetPostsByUser :many
-SELECT posts.id, title, posts.created_at, posts.updated_at FROM posts JOIN users ON posts.user_id = users.id WHERE deleted_at is NULL AND posts.user_id = $1;
+SELECT posts.id, posts.title, posts.created_at, posts.updated_at 
+FROM posts JOIN users ON posts.user_id = users.id
+WHERE deleted_at is NULL AND posts.user_id = $1
+ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: UpdatePostInfo :exec
 UPDATE posts
-SET title = $1, content = $2, updated_at = NOW()
-WHERE id = $3;
+SET title = $1, content = $2, slug = $3, updated_at = NOW()
+WHERE id = $4;
+
+
+-- name: FetchPost :many
+SELECT posts.title, posts.content, posts.created_at, posts.updated_at, users.username, users.id 
+FROM posts JOIN users on posts.user_id = users.id
+ORDER BY posts.created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: GetPostsCount :one
+SELECT COUNT(*) FROM posts JOIN users on posts.user_id = users.id
+WHERE users.id = $1;

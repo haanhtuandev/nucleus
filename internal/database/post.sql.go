@@ -66,6 +66,57 @@ func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const fetchPost = `-- name: FetchPost :many
+SELECT posts.title, posts.content, posts.created_at, posts.updated_at, users.username, users.id 
+FROM posts JOIN users on posts.user_id = users.id
+ORDER BY posts.created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type FetchPostParams struct {
+	Limit  int32
+	Offset int32
+}
+
+type FetchPostRow struct {
+	Title     string
+	Content   string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Username  string
+	ID        uuid.UUID
+}
+
+func (q *Queries) FetchPost(ctx context.Context, arg FetchPostParams) ([]FetchPostRow, error) {
+	rows, err := q.db.QueryContext(ctx, fetchPost, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FetchPostRow
+	for rows.Next() {
+		var i FetchPostRow
+		if err := rows.Scan(
+			&i.Title,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Username,
+			&i.ID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllPosts = `-- name: GetAllPosts :many
 SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug FROM posts WHERE deleted_at is NULL
 `
@@ -143,8 +194,18 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (Post, error) 
 }
 
 const getPostsByUser = `-- name: GetPostsByUser :many
-SELECT posts.id, title, posts.created_at, posts.updated_at FROM posts JOIN users ON posts.user_id = users.id WHERE deleted_at is NULL AND posts.user_id = $1
+SELECT posts.id, posts.title, posts.created_at, posts.updated_at 
+FROM posts JOIN users ON posts.user_id = users.id
+WHERE deleted_at is NULL AND posts.user_id = $1
+ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3
 `
+
+type GetPostsByUserParams struct {
+	UserID uuid.UUID
+	Limit  int32
+	Offset int32
+}
 
 type GetPostsByUserRow struct {
 	ID        uuid.UUID
@@ -153,8 +214,8 @@ type GetPostsByUserRow struct {
 	UpdatedAt time.Time
 }
 
-func (q *Queries) GetPostsByUser(ctx context.Context, userID uuid.UUID) ([]GetPostsByUserRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPostsByUser, userID)
+func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) ([]GetPostsByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsByUser, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +242,18 @@ func (q *Queries) GetPostsByUser(ctx context.Context, userID uuid.UUID) ([]GetPo
 	return items, nil
 }
 
+const getPostsCount = `-- name: GetPostsCount :one
+SELECT COUNT(*) FROM posts JOIN users on posts.user_id = users.id
+WHERE users.id = $1
+`
+
+func (q *Queries) GetPostsCount(ctx context.Context, id uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getPostsCount, id)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const lookUpSlug = `-- name: LookUpSlug :one
 SELECT COUNT(*) from posts WHERE slug = $1
 `
@@ -194,17 +267,23 @@ func (q *Queries) LookUpSlug(ctx context.Context, slug string) (int64, error) {
 
 const updatePostInfo = `-- name: UpdatePostInfo :exec
 UPDATE posts
-SET title = $1, content = $2, updated_at = NOW()
-WHERE id = $3
+SET title = $1, content = $2, slug = $3, updated_at = NOW()
+WHERE id = $4
 `
 
 type UpdatePostInfoParams struct {
 	Title   string
 	Content string
+	Slug    string
 	ID      uuid.UUID
 }
 
 func (q *Queries) UpdatePostInfo(ctx context.Context, arg UpdatePostInfoParams) error {
-	_, err := q.db.ExecContext(ctx, updatePostInfo, arg.Title, arg.Content, arg.ID)
+	_, err := q.db.ExecContext(ctx, updatePostInfo,
+		arg.Title,
+		arg.Content,
+		arg.Slug,
+		arg.ID,
+	)
 	return err
 }

@@ -5,9 +5,9 @@ import (
 	"boilerplate/internal/database"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,31 +38,32 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
-	type params struct {
-		Username string  `json:"username"`
-		Password string  `json:"password"`
-		Bio      *string `json:"bio"`
-	}
-	param := params{}
-	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+
+	sign_up_request := SignupRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&sign_up_request); err != nil {
 		// 400 because client send bad json
 		respondWithError(w, 400, "Invalid request payload", err)
 		return
 	}
+	err := sign_up_request.Validate()
+	if err != nil {
+		respondWithError(w, 400, "invalid format", err)
+		return
+	}
 
-	hashed_password, err := auth.HashPassword(param.Password)
+	hashed_password, err := auth.HashPassword(sign_up_request.Password)
 	if err != nil {
 		respondWithError(w, 500, "error with hash password", err)
 		return
 	}
 
 	dbParams := database.CreateUserParams{
-		Username:       param.Username,
+		Username:       sign_up_request.Username,
 		HashedPassword: hashed_password,
 	}
 
-	if param.Bio != nil {
-		dbParams.Bio = sql.NullString{String: *param.Bio, Valid: true}
+	if sign_up_request.Bio != nil {
+		dbParams.Bio = sql.NullString{String: *sign_up_request.Bio, Valid: true}
 	} else {
 		dbParams.Bio = sql.NullString{Valid: false}
 	}
@@ -77,21 +78,28 @@ func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 500, "Couldn't create user", err)
 		return
 	}
-	respondWithJSON(w, 201, user)
+	user_json := User{
+		ID:        user.ID,
+		Username:  user.Username,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}
+	respondWithJSON(w, 201, user_json)
 }
 
 func (a *ApiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
-	type params struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-	param := params{}
-	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+	log_in_request := LoginRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&log_in_request); err != nil {
 		// 400 because client send bad json
 		respondWithError(w, 400, "Invalid request payload", err)
 		return
 	}
-	user, err := a.Database.GetUserByName(r.Context(), param.Username)
+	err := log_in_request.Validate()
+	if err != nil {
+		respondWithError(w, 400, "Invalid request format", err)
+		return
+	}
+	user, err := a.Database.GetUserByName(r.Context(), log_in_request.Username)
 	if err != nil {
 		if isUniqueViolation(err) {
 			respondWithError(w, 400, "username already exists", err)
@@ -101,7 +109,7 @@ func (a *ApiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	authenticated, err := auth.CheckPasswordHash(param.Password, user.HashedPassword)
+	authenticated, err := auth.CheckPasswordHash(log_in_request.Password, user.HashedPassword)
 	if !authenticated {
 		respondWithError(w, 400, "Wrong password", err)
 		return
@@ -142,13 +150,9 @@ func (a *ApiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *ApiConfig) addPostHandler(w http.ResponseWriter, r *http.Request) {
-	type params struct {
-		Title   string    `json:"title"`
-		Content string    `json:"content"`
-		UserID  uuid.UUID `json:"user_id"`
-	}
-	param := params{}
-	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+	create_post_request := CreatePostRequest{}
+
+	if err := json.NewDecoder(r.Body).Decode(&create_post_request); err != nil {
 		// 400 because client send bad json
 		respondWithError(w, 400, "Invalid request payload", err)
 		return
@@ -159,18 +163,14 @@ func (a *ApiConfig) addPostHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 500, "wrong user_id format", err)
 		return
 	}
-	if param.UserID != user_id {
-		respondWithError(w, http.StatusUnauthorized, "method not allowed", errors.New("method not allowed!"))
-		return
-	}
 
-	slug := cleanTitle(param.Title)
+	slug := cleanTitle(create_post_request.Title)
 
 	for i := 0; i < 5; i++ {
 		dbParams := database.CreatePostParams{
-			Content: param.Content,
-			Title:   param.Title,
-			UserID:  param.UserID,
+			Content: create_post_request.Content,
+			Title:   create_post_request.Title,
+			UserID:  user_id,
 			Slug:    slug,
 		}
 		post, err := a.Database.CreatePost(r.Context(), dbParams)
@@ -208,22 +208,6 @@ func (a *ApiConfig) getAllPostsHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, 201, posts)
 }
 
-// func (a *ApiConfig) getPostByIdHandler(w http.ResponseWriter, r *http.Request) {
-// 	post_id := r.PathValue("post_id")
-// 	parsed_post_id, err := uuid.Parse(post_id)
-// 	if err != nil {
-// 		respondWithError(w, 500, "Error converting post ID", err)
-// 		return
-// 	}
-
-// 	post, err := a.Database.GetPostById(r.Context(), parsed_post_id)
-// 	if err != nil {
-// 		respondWithError(w, 500, "Error while finding post", err)
-// 		return
-// 	}
-
-//		respondWithJSON(w, 201, post)
-//	}
 func (a *ApiConfig) getPostBySlugHandler(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 
@@ -235,39 +219,44 @@ func (a *ApiConfig) getPostBySlugHandler(w http.ResponseWriter, r *http.Request)
 
 	respondWithJSON(w, 201, post)
 }
-func (a *ApiConfig) getUserByIdHandler(w http.ResponseWriter, r *http.Request) {
+func (a *ApiConfig) getProfileByIdHandler(w http.ResponseWriter, r *http.Request) {
+	// retrieve user
 	user_id := r.PathValue("user_id")
 	parsed_user_id, err := uuid.Parse(user_id)
-	if err != nil {
-		respondWithError(w, 500, "Error converting user ID", err)
-		return
-	}
-
 	user, err := a.Database.GetUserById(r.Context(), parsed_user_id)
-	if err != nil {
-		respondWithError(w, 500, "Error while finding user", err)
-		return
-	}
-
-	respondWithJSON(w, 201, user)
-}
-
-func (a *ApiConfig) getProfile(w http.ResponseWriter, r *http.Request) {
-	user_id, err := GetUserID(r.Context())
-	if err != nil {
-		respondWithError(w, 500, "error getting user ID from context", err)
-		return
-	}
-	user, err := a.Database.GetUserById(r.Context(), user_id)
 	if err != nil {
 		respondWithError(w, 500, "error retrieving user", err)
 		return
 	}
-	posts, err := a.Database.GetPostsByUser(r.Context(), user_id)
+
+	// retrieve posts with pagination
+	queryParams := r.URL.Query()
+	limitStr := queryParams.Get("limit")
+	pageStr := queryParams.Get("page")
+
+	page := 1
+	limit := 20
+
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+
+	offset := (page - 1) * limit
+
+	posts, err := a.Database.GetPostsByUser(r.Context(), database.GetPostsByUserParams{
+		UserID: parsed_user_id,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
 	if err != nil {
-		respondWithError(w, 500, "error retrieving posts", err)
+		respondWithError(w, 500, "error retrieving paginated posts from database", err)
 		return
 	}
+
+	post_count, err := a.Database.GetPostsCount(r.Context(), parsed_user_id)
 
 	type profileVal struct {
 		Username      string
@@ -278,7 +267,62 @@ func (a *ApiConfig) getProfile(w http.ResponseWriter, r *http.Request) {
 	returnVal := profileVal{
 		Username:      user.Username,
 		PostsMetadata: posts,
-		PostCount:     len(posts),
+		PostCount:     int(post_count),
+	}
+	respondWithJSON(w, 200, returnVal)
+}
+
+func (a *ApiConfig) getProfileHandler(w http.ResponseWriter, r *http.Request) {
+	user_id, err := GetUserID(r.Context())
+	if err != nil {
+		respondWithError(w, 500, "error getting user ID from context", err)
+		return
+	}
+	user, err := a.Database.GetUserById(r.Context(), user_id)
+	if err != nil {
+		respondWithError(w, 500, "error retrieving user", err)
+		return
+	}
+
+	// retrieve posts with pagination
+	queryParams := r.URL.Query()
+	limitStr := queryParams.Get("limit")
+	pageStr := queryParams.Get("page")
+
+	page := 1
+	limit := 20
+
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+
+	offset := (page - 1) * limit
+
+	posts, err := a.Database.GetPostsByUser(r.Context(), database.GetPostsByUserParams{
+		UserID: user_id,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		respondWithError(w, 500, "error retrieving paginated posts from database", err)
+		return
+	}
+
+	post_count, err := a.Database.GetPostsCount(r.Context(), user_id)
+
+	type profileVal struct {
+		Username      string
+		PostsMetadata []database.GetPostsByUserRow
+		PostCount     int
+	}
+
+	returnVal := profileVal{
+		Username:      user.Username,
+		PostsMetadata: posts,
+		PostCount:     int(post_count),
 	}
 	respondWithJSON(w, 200, returnVal)
 }
@@ -306,29 +350,34 @@ func (a *ApiConfig) updatePostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// input params
-	type params struct {
-		Title   string `json:"title"`
-		Content string `json:"content"`
-	}
-	param := params{}
-	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+
+	update_post_request := UpdatePostRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&update_post_request); err != nil {
 		// 400 because client send bad json
 		respondWithError(w, 400, "Invalid request payload", err)
 		return
 	}
 
-	// update logic
-	update_params := database.UpdatePostInfoParams{
-		Title:   param.Title,
-		Content: param.Content,
-		ID:      parsed_post_id,
-	}
-	err = a.Database.UpdatePostInfo(r.Context(), update_params)
-	if err != nil {
-		respondWithError(w, 500, "error updating post info", err)
+	slug := cleanTitle(update_post_request.Title)
+
+	for i := 0; i < 5; i++ {
+		update_params := database.UpdatePostInfoParams{
+			Title:   update_post_request.Title,
+			Content: update_post_request.Content,
+			Slug:    slug,
+			ID:      parsed_post_id,
+		}
+		err = a.Database.UpdatePostInfo(r.Context(), update_params)
+		if err == nil {
+			respondWithJSON(w, 200, nil)
+		}
+		if isUniqueViolation(err) {
+			slug = fmt.Sprintf("%s-%s", slug, generateRandomString(5))
+			continue
+		}
+		respondWithError(w, 500, "DB Error", err)
 		return
 	}
-	respondWithJSON(w, 200, nil)
 
 }
 
@@ -342,16 +391,13 @@ func (a *ApiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *ApiConfig) refreshHandler(w http.ResponseWriter, r *http.Request) {
-	type params struct {
-		Refresh_token string `json:"refresh_token"`
-	}
-	param := params{}
-	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+	refresh_token_request := RefreshTokenRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&refresh_token_request); err != nil {
 		respondWithError(w, 400, "Invalid request payload", err)
 		return
 	}
 
-	token_info, err := a.Database.GetUserFromRefreshToken(r.Context(), param.Refresh_token)
+	token_info, err := a.Database.GetUserFromRefreshToken(r.Context(), refresh_token_request.RefreshToken)
 	if err != nil {
 		respondWithError(w, 500, "error retrieving token", err)
 		return
@@ -368,7 +414,7 @@ func (a *ApiConfig) refreshHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.Database.RevokeToken(r.Context(), param.Refresh_token)
+	err = a.Database.RevokeToken(r.Context(), refresh_token_request.RefreshToken)
 	if err != nil {
 		respondWithError(w, 401, "something is wrong with revoking", err)
 		return
@@ -434,4 +480,34 @@ func (a *ApiConfig) deletePostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondWithJSON(w, 201, nil)
+}
+
+func (a *ApiConfig) fetchPostHandler(w http.ResponseWriter, r *http.Request) {
+
+	queryParams := r.URL.Query()
+	limitStr := queryParams.Get("limit")
+	pageStr := queryParams.Get("page")
+
+	page := 1
+	limit := 20
+
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+
+	offset := (page - 1) * limit
+
+	posts, err := a.Database.FetchPost(r.Context(), database.FetchPostParams{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		respondWithError(w, 500, "error retrieving paginated posts from database", err)
+		return
+	}
+	respondWithJSON(w, 200, posts)
+
 }
