@@ -53,3 +53,22 @@ LIMIT $1 OFFSET $2;
 -- name: GetPostsCount :one
 SELECT COUNT(*) FROM posts JOIN users on posts.user_id = users.id
 WHERE users.id = $1;
+
+-- name: SearchPosts :many
+SELECT
+  posts.title,
+  posts.content,
+  posts.created_at,
+  posts.updated_at,
+  users.username,
+  users.id
+FROM posts
+JOIN users ON posts.user_id = users.id
+WHERE posts.search_vector @@ plainto_tsquery('english', $1)
+ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountSearchPosts :one
+SELECT COUNT(*)
+FROM posts
+WHERE search_vector @@ plainto_tsquery('english', $1);

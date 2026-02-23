@@ -12,6 +12,19 @@ import (
 	"github.com/google/uuid"
 )
 
+const countSearchPosts = `-- name: CountSearchPosts :one
+SELECT COUNT(*)
+FROM posts
+WHERE search_vector @@ plainto_tsquery('english', $1)
+`
+
+func (q *Queries) CountSearchPosts(ctx context.Context, plaintoTsquery string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countSearchPosts, plaintoTsquery)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createPost = `-- name: CreatePost :one
 INSERT INTO posts (id, title, content, user_id, slug, created_at, updated_at, deleted_at)
 VALUES (
@@ -24,7 +37,7 @@ VALUES (
     NOW(),
     NULL
 )
-RETURNING id, content, user_id, created_at, updated_at, deleted_at, title, slug
+RETURNING id, content, user_id, created_at, updated_at, deleted_at, title, slug, search_vector
 `
 
 type CreatePostParams struct {
@@ -51,6 +64,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.DeletedAt,
 		&i.Title,
 		&i.Slug,
+		&i.SearchVector,
 	)
 	return i, err
 }
@@ -118,7 +132,7 @@ func (q *Queries) FetchPost(ctx context.Context, arg FetchPostParams) ([]FetchPo
 }
 
 const getAllPosts = `-- name: GetAllPosts :many
-SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug FROM posts WHERE deleted_at is NULL
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug, search_vector FROM posts WHERE deleted_at is NULL
 `
 
 func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
@@ -139,6 +153,7 @@ func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 			&i.DeletedAt,
 			&i.Title,
 			&i.Slug,
+			&i.SearchVector,
 		); err != nil {
 			return nil, err
 		}
@@ -154,7 +169,7 @@ func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 }
 
 const getPostById = `-- name: GetPostById :one
-SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug FROM posts WHERE id = $1 AND deleted_at is NULL
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug, search_vector FROM posts WHERE id = $1 AND deleted_at is NULL
 `
 
 func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
@@ -169,12 +184,13 @@ func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
 		&i.DeletedAt,
 		&i.Title,
 		&i.Slug,
+		&i.SearchVector,
 	)
 	return i, err
 }
 
 const getPostBySlug = `-- name: GetPostBySlug :one
-SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug FROM posts WHERE slug = $1 AND deleted_at is NULL
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug, search_vector FROM posts WHERE slug = $1 AND deleted_at is NULL
 `
 
 func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (Post, error) {
@@ -189,6 +205,7 @@ func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (Post, error) 
 		&i.DeletedAt,
 		&i.Title,
 		&i.Slug,
+		&i.SearchVector,
 	)
 	return i, err
 }
@@ -263,6 +280,66 @@ func (q *Queries) LookUpSlug(ctx context.Context, slug string) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const searchPosts = `-- name: SearchPosts :many
+SELECT
+  posts.title,
+  posts.content,
+  posts.created_at,
+  posts.updated_at,
+  users.username,
+  users.id
+FROM posts
+JOIN users ON posts.user_id = users.id
+WHERE posts.search_vector @@ plainto_tsquery('english', $1)
+ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type SearchPostsParams struct {
+	PlaintoTsquery string
+	Limit          int32
+	Offset         int32
+}
+
+type SearchPostsRow struct {
+	Title     string
+	Content   string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Username  string
+	ID        uuid.UUID
+}
+
+func (q *Queries) SearchPosts(ctx context.Context, arg SearchPostsParams) ([]SearchPostsRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchPosts, arg.PlaintoTsquery, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchPostsRow
+	for rows.Next() {
+		var i SearchPostsRow
+		if err := rows.Scan(
+			&i.Title,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Username,
+			&i.ID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updatePostInfo = `-- name: UpdatePostInfo :exec

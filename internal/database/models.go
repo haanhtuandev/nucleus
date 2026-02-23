@@ -12,14 +12,15 @@ import (
 )
 
 type Post struct {
-	ID        uuid.UUID
-	Content   string
-	UserID    uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt sql.NullTime
-	Title     string
-	Slug      string
+	ID           uuid.UUID
+	Content      string
+	UserID       uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    sql.NullTime
+	Title        string
+	Slug         string
+	SearchVector interface{}
 }
 
 type RefreshToken struct {

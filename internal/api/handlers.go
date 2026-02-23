@@ -511,3 +511,51 @@ func (a *ApiConfig) fetchPostHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, 200, posts)
 
 }
+
+func (a *ApiConfig) searchPostHandler(w http.ResponseWriter, r *http.Request) {
+	queryParams := r.URL.Query()
+	limitStr := queryParams.Get("limit")
+	pageStr := queryParams.Get("page")
+	queryStr := queryParams.Get("q")
+
+	page := 1
+	limit := 20
+
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+
+	offset := (page - 1) * limit
+	// fetch posts
+	posts, err := a.Database.SearchPosts(
+		r.Context(),
+		database.SearchPostsParams{
+			PlaintoTsquery: queryStr,
+			Limit:          int32(limit),
+			Offset:         int32(offset),
+		},
+	)
+	if err != nil {
+		respondWithError(w, 500, "search failed", err)
+		return
+	}
+
+	// count
+	total, err := a.Database.CountSearchPosts(r.Context(), queryStr)
+	if err != nil {
+		respondWithError(w, 500, "count failed", err)
+		return
+	}
+
+	respondWithJSON(w, 200, map[string]any{
+		"query": queryStr,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+		"posts": posts,
+	})
+
+}

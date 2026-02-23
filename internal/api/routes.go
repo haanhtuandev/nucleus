@@ -23,6 +23,7 @@ func NewHandler(a *ApiConfig) http.Handler {
 	mux.HandleFunc("GET /api/reset", a.resetHandler)
 	mux.Handle("DELETE /me/posts/{post_id}", a.authorizeMiddleware(a.deletePostHandler))
 	mux.HandleFunc("POST /auth/refresh", a.refreshHandler)
+	mux.HandleFunc("GET /posts/search", a.searchPostHandler)
 
 	return mux
 }

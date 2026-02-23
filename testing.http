@@ -70,7 +70,7 @@ DELETE http://localhost:8080/posts/06fb2091-4aba-4a1b-b9c8-b4847423b366
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjYzMTYwLCJpYXQiOjE3NzE2NTk1NjB9.PbzNJwHeTyErqrZ0sLOnzp425a3cLAt6X23NNccdvDA
 
 ###
-GET http://localhost:8080/posts/title-9
+GET http://localhost:8080/posts
 
 
 ###
@@ -90,3 +90,7 @@ Content-Type: application/json
 {
     refresh_token: 
 }
+
+
+###
+GET http://localhost:8080/posts/search?q=content&page=1&limit=5
