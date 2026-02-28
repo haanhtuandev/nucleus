@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -18,13 +19,21 @@ func main() {
 	}
 	dbURL := os.Getenv("DB_URL")
 	secret_key := os.Getenv("SECRET")
-
-	log.Println(dbURL)
 	db, err := sql.Open("postgres", dbURL)
 
 	if err != nil {
-		log.Printf("Database connection error %v", err)
+		log.Fatal(err)
 	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	// Add health check
+	if err := db.Ping(); err != nil {
+		log.Fatal(err)
+	}
+
 	dbQueries := database.New(db)
 	a := &api.ApiConfig{Database: dbQueries, Secret: secret_key}
 	mux := api.NewHandler(a)

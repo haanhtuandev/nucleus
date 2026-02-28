@@ -11,6 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type Follow struct {
+	FollowerID uuid.UUID
+	FolloweeID uuid.UUID
+	CreatedAt  time.Time
+}
+
 type Post struct {
 	ID           uuid.UUID
 	Content      string
@@ -19,7 +25,6 @@ type Post struct {
 	UpdatedAt    time.Time
 	DeletedAt    sql.NullTime
 	Title        string
-	Slug         string
 	SearchVector interface{}
 }
 

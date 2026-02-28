@@ -1,11 +1,10 @@
 -- name: CreatePost :one
-INSERT INTO posts (id, title, content, user_id, slug, created_at, updated_at, deleted_at)
+INSERT INTO posts (id, title, content, user_id, created_at, updated_at, deleted_at)
 VALUES (
     gen_random_uuid(),
     $1,
     $2,
     $3,
-    $4,
     NOW(),
     NOW(),
     NULL
@@ -24,35 +23,27 @@ SET deleted_at = NOW()
 WHERE id = $1;
 
 
--- name: GetPostBySlug :one
-SELECT * FROM posts WHERE slug = $1 AND deleted_at is NULL;
-
-
--- name: LookUpSlug :one
-SELECT COUNT(*) from posts WHERE slug = $1;
 
 -- name: GetPostsByUser :many
-SELECT posts.id, posts.title, posts.created_at, posts.updated_at 
-FROM posts JOIN users ON posts.user_id = users.id
-WHERE deleted_at is NULL AND posts.user_id = $1
-ORDER BY posts.created_at DESC
+SELECT * from posts
+WHERE user_id = $1 AND deleted_at is NULL
+ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: UpdatePostInfo :exec
 UPDATE posts
-SET title = $1, content = $2, slug = $3, updated_at = NOW()
-WHERE id = $4;
+SET title = $1, content = $2, updated_at = NOW()
+WHERE id = $3;
 
 
 -- name: FetchPost :many
-SELECT posts.title, posts.content, posts.created_at, posts.updated_at, users.username, users.id 
-FROM posts JOIN users on posts.user_id = users.id
-ORDER BY posts.created_at DESC
+SELECT * FROM posts
+ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetPostsCount :one
-SELECT COUNT(*) FROM posts JOIN users on posts.user_id = users.id
-WHERE users.id = $1;
+SELECT COUNT(*) FROM posts
+WHERE user_id = $1;
 
 -- name: SearchPosts :many
 SELECT

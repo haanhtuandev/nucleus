@@ -31,7 +31,7 @@ func (r *SignupRequest) Validate() error {
 	if len(r.Password) < 8 {
 		return errors.New("password must be at least 8 characters")
 	}
-	if *r.Bio != "" && len(*r.Bio) > 500 {
+	if r.Bio != nil && len(*r.Bio) > 500 {
 		return errors.New("bio must be under 500 characters")
 	}
 	return nil

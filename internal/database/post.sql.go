@@ -26,34 +26,27 @@ func (q *Queries) CountSearchPosts(ctx context.Context, plaintoTsquery string) (
 }
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (id, title, content, user_id, slug, created_at, updated_at, deleted_at)
+INSERT INTO posts (id, title, content, user_id, created_at, updated_at, deleted_at)
 VALUES (
     gen_random_uuid(),
     $1,
     $2,
     $3,
-    $4,
     NOW(),
     NOW(),
     NULL
 )
-RETURNING id, content, user_id, created_at, updated_at, deleted_at, title, slug, search_vector
+RETURNING id, content, user_id, created_at, updated_at, deleted_at, title, search_vector
 `
 
 type CreatePostParams struct {
 	Title   string
 	Content string
 	UserID  uuid.UUID
-	Slug    string
 }
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
-	row := q.db.QueryRowContext(ctx, createPost,
-		arg.Title,
-		arg.Content,
-		arg.UserID,
-		arg.Slug,
-	)
+	row := q.db.QueryRowContext(ctx, createPost, arg.Title, arg.Content, arg.UserID)
 	var i Post
 	err := row.Scan(
 		&i.ID,
@@ -63,7 +56,6 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.Title,
-		&i.Slug,
 		&i.SearchVector,
 	)
 	return i, err
@@ -81,9 +73,8 @@ func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
 }
 
 const fetchPost = `-- name: FetchPost :many
-SELECT posts.title, posts.content, posts.created_at, posts.updated_at, users.username, users.id 
-FROM posts JOIN users on posts.user_id = users.id
-ORDER BY posts.created_at DESC
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, search_vector FROM posts
+ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -92,31 +83,24 @@ type FetchPostParams struct {
 	Offset int32
 }
 
-type FetchPostRow struct {
-	Title     string
-	Content   string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Username  string
-	ID        uuid.UUID
-}
-
-func (q *Queries) FetchPost(ctx context.Context, arg FetchPostParams) ([]FetchPostRow, error) {
+func (q *Queries) FetchPost(ctx context.Context, arg FetchPostParams) ([]Post, error) {
 	rows, err := q.db.QueryContext(ctx, fetchPost, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []FetchPostRow
+	var items []Post
 	for rows.Next() {
-		var i FetchPostRow
+		var i Post
 		if err := rows.Scan(
-			&i.Title,
+			&i.ID,
 			&i.Content,
+			&i.UserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Username,
-			&i.ID,
+			&i.DeletedAt,
+			&i.Title,
+			&i.SearchVector,
 		); err != nil {
 			return nil, err
 		}
@@ -132,7 +116,7 @@ func (q *Queries) FetchPost(ctx context.Context, arg FetchPostParams) ([]FetchPo
 }
 
 const getAllPosts = `-- name: GetAllPosts :many
-SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug, search_vector FROM posts WHERE deleted_at is NULL
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, search_vector FROM posts WHERE deleted_at is NULL
 `
 
 func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
@@ -152,7 +136,6 @@ func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.Title,
-			&i.Slug,
 			&i.SearchVector,
 		); err != nil {
 			return nil, err
@@ -169,7 +152,7 @@ func (q *Queries) GetAllPosts(ctx context.Context) ([]Post, error) {
 }
 
 const getPostById = `-- name: GetPostById :one
-SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug, search_vector FROM posts WHERE id = $1 AND deleted_at is NULL
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, search_vector FROM posts WHERE id = $1 AND deleted_at is NULL
 `
 
 func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
@@ -183,38 +166,15 @@ func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.Title,
-		&i.Slug,
-		&i.SearchVector,
-	)
-	return i, err
-}
-
-const getPostBySlug = `-- name: GetPostBySlug :one
-SELECT id, content, user_id, created_at, updated_at, deleted_at, title, slug, search_vector FROM posts WHERE slug = $1 AND deleted_at is NULL
-`
-
-func (q *Queries) GetPostBySlug(ctx context.Context, slug string) (Post, error) {
-	row := q.db.QueryRowContext(ctx, getPostBySlug, slug)
-	var i Post
-	err := row.Scan(
-		&i.ID,
-		&i.Content,
-		&i.UserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-		&i.Title,
-		&i.Slug,
 		&i.SearchVector,
 	)
 	return i, err
 }
 
 const getPostsByUser = `-- name: GetPostsByUser :many
-SELECT posts.id, posts.title, posts.created_at, posts.updated_at 
-FROM posts JOIN users ON posts.user_id = users.id
-WHERE deleted_at is NULL AND posts.user_id = $1
-ORDER BY posts.created_at DESC
+SELECT id, content, user_id, created_at, updated_at, deleted_at, title, search_vector from posts
+WHERE user_id = $1 AND deleted_at is NULL
+ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -224,27 +184,24 @@ type GetPostsByUserParams struct {
 	Offset int32
 }
 
-type GetPostsByUserRow struct {
-	ID        uuid.UUID
-	Title     string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) ([]GetPostsByUserRow, error) {
+func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) ([]Post, error) {
 	rows, err := q.db.QueryContext(ctx, getPostsByUser, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetPostsByUserRow
+	var items []Post
 	for rows.Next() {
-		var i GetPostsByUserRow
+		var i Post
 		if err := rows.Scan(
 			&i.ID,
-			&i.Title,
+			&i.Content,
+			&i.UserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Title,
+			&i.SearchVector,
 		); err != nil {
 			return nil, err
 		}
@@ -260,23 +217,12 @@ func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) 
 }
 
 const getPostsCount = `-- name: GetPostsCount :one
-SELECT COUNT(*) FROM posts JOIN users on posts.user_id = users.id
-WHERE users.id = $1
+SELECT COUNT(*) FROM posts
+WHERE user_id = $1
 `
 
-func (q *Queries) GetPostsCount(ctx context.Context, id uuid.UUID) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getPostsCount, id)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const lookUpSlug = `-- name: LookUpSlug :one
-SELECT COUNT(*) from posts WHERE slug = $1
-`
-
-func (q *Queries) LookUpSlug(ctx context.Context, slug string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, lookUpSlug, slug)
+func (q *Queries) GetPostsCount(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getPostsCount, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -344,23 +290,17 @@ func (q *Queries) SearchPosts(ctx context.Context, arg SearchPostsParams) ([]Sea
 
 const updatePostInfo = `-- name: UpdatePostInfo :exec
 UPDATE posts
-SET title = $1, content = $2, slug = $3, updated_at = NOW()
-WHERE id = $4
+SET title = $1, content = $2, updated_at = NOW()
+WHERE id = $3
 `
 
 type UpdatePostInfoParams struct {
 	Title   string
 	Content string
-	Slug    string
 	ID      uuid.UUID
 }
 
 func (q *Queries) UpdatePostInfo(ctx context.Context, arg UpdatePostInfoParams) error {
-	_, err := q.db.ExecContext(ctx, updatePostInfo,
-		arg.Title,
-		arg.Content,
-		arg.Slug,
-		arg.ID,
-	)
+	_, err := q.db.ExecContext(ctx, updatePostInfo, arg.Title, arg.Content, arg.ID)
 	return err
 }

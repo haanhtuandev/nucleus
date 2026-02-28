@@ -21,7 +21,7 @@ content-type: application/json
 ###
 POST http://localhost:8080/me/posts
 content-type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiZDA1MGNiZjktMTU2MS00YjM0LWI0NzMtMTc2NjRkODc4MzhjIiwiZXhwIjoxNzcxNzQwOTQ2LCJpYXQiOjE3NzE3MzczNDZ9.R3TxUaYAz8vyhv-SnS82SY_stW5CPxcytvHQrdHDRAE
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNzNkOGVkZjQtNGQ2Yi00ZDRiLTg4NTYtYmY5MGNmMzg0ZTM5IiwiZXhwIjoxNzcyMTg5NjE5LCJpYXQiOjE3NzIxODYwMTl9.HIMy6gqX0i4tL-zEr0_7iPNEF3DrrterPygqzILCaLQ
 
 {
     "user_id": "1edf05b0-9873-4314-84bc-06c894687f18",
@@ -31,7 +31,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1Y
 ###
 POST http://localhost:8080/me/posts
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiMDgyZDkxYjItNmQwNS00ODk0LWIxMjQtMWEyNzlhODNiMTg4IiwiZXhwIjoxNzcxODIyOTczLCJpYXQiOjE3NzE4MTkzNzN9.AFx5tAdysF8qEsepY855XVfiS1DMf2nz7-2A3509mWM
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNzY4OGI3MGYtNmMxMC00NWQ2LWIwODAtNDU0NTI1YjJlZWFkIiwiZXhwIjoxNzcyMDgyMDE0LCJpYXQiOjE3NzIwNzg0MTR9.H-V0v5EMj7l5P0-QfrAuTgqbgwpBG3is-iZzeiNAH1I
 
 {
     "title": "Title 11",
@@ -39,9 +39,9 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1Y
 }
 
 ###
-PUT http://localhost:8080/posts/e0184550-2e07-42be-bc4f-1ca2fef9776b
+PUT http://localhost:8080/me/posts/60fce761-d85d-4fed-ac04-6940fa19b95d
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNjUwMThiMTMtYTE0MS00NTEwLThjMzYtOTE1OGZkNThjNGJlIiwiZXhwIjoxNzcxNjUxMjMyLCJpYXQiOjE3NzE2NDc2MzJ9.Fnb-ZDMY5gIX8DUAGO9DaM3cYJqANmjbZzu4gmiYTHU
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNzNkOGVkZjQtNGQ2Yi00ZDRiLTg4NTYtYmY5MGNmMzg0ZTM5IiwiZXhwIjoxNzcyMTg5NjE5LCJpYXQiOjE3NzIxODYwMTl9.HIMy6gqX0i4tL-zEr0_7iPNEF3DrrterPygqzILCaLQ
 
 {
     "title": "New title",
@@ -49,9 +49,9 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1Y
 }
 
 ###
-GET http://localhost:8080/me/profile?page=2&limit=5
+GET http://localhost:8080/me/profile?page=1&limit=5
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiMDgyZDkxYjItNmQwNS00ODk0LWIxMjQtMWEyNzlhODNiMTg4IiwiZXhwIjoxNzcxODIyOTczLCJpYXQiOjE3NzE4MTkzNzN9.AFx5tAdysF8qEsepY855XVfiS1DMf2nz7-2A3509mWM
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoYWFuaHR1YW5kZXZibG9nIiwic3ViIjoiNzNkOGVkZjQtNGQ2Yi00ZDRiLTg4NTYtYmY5MGNmMzg0ZTM5IiwiZXhwIjoxNzcyMTg5NjE5LCJpYXQiOjE3NzIxODYwMTl9.HIMy6gqX0i4tL-zEr0_7iPNEF3DrrterPygqzILCaLQ
 
 ###
 GET http://localhost:8080/api/reset
@@ -88,7 +88,7 @@ POST http://localhost:8080/auth/refresh
 Content-Type: application/json
 
 {
-    refresh_token: 
+    "refresh_token": "cda1537860b8b06c4f5ffd24b7a7fb6cff4dbee9721dc902f00b12c12cede79b"
 }
 
 
