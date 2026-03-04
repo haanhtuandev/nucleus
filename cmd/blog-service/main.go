@@ -19,6 +19,12 @@ func main() {
 	}
 	dbURL := os.Getenv("DB_URL")
 	secret_key := os.Getenv("SECRET")
+	if secret_key == "" {
+		log.Fatal("SECRET environment variable is required")
+	}
+	if len(secret_key) < 32 {
+		log.Fatal("SECRET must be at least 32 characters for security")
+	}
 	db, err := sql.Open("postgres", dbURL)
 
 	if err != nil {
@@ -36,11 +42,18 @@ func main() {
 
 	dbQueries := database.New(db)
 	a := &api.ApiConfig{Database: dbQueries, Secret: secret_key}
-	mux := api.NewHandler(a)
+	rl := &api.RateLimit{RateMap: make(map[string](map[int]int)),
+		LimitPerHour: 1000}
+	rl.StartGlobalNuke()
+	mux := api.NewHandler(a, rl)
+
+	// Wrap with CORS middleware
+	corsConfig := api.DefaultCORSConfig()
+	handler := api.CORS(corsConfig)(mux)
 
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: mux,
+		Handler: handler,
 	}
 	log.Printf("Serving files on port 8080")
 	log.Fatal(http.ListenAndServe(server.Addr, server.Handler))

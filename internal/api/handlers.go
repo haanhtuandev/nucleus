@@ -36,10 +36,6 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Service is healthy!"))
 }
 
-func homePageHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./static/index.html")
-}
-
 func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	sign_up_request := SignupRequest{}
@@ -52,6 +48,12 @@ func (a *ApiConfig) addUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithError(w, StatusBadRequest, "invalid format", err)
 		return
+	}
+
+	// Sanitize input to prevent XSS attacks
+	if sign_up_request.Bio != nil {
+		sanitizedBio := sanitizeInput(*sign_up_request.Bio)
+		sign_up_request.Bio = &sanitizedBio
 	}
 
 	hashed_password, err := auth.HashPassword(sign_up_request.Password)
@@ -166,6 +168,10 @@ func (a *ApiConfig) addPostHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, StatusBadRequest, "bad request", err)
 		return
 	}
+
+	// Sanitize input to prevent XSS attacks
+	create_post_request.Title = sanitizeInput(create_post_request.Title)
+	create_post_request.Content = sanitizeInput(create_post_request.Content)
 
 	user_id, err := GetUserID(r.Context())
 	if err != nil {
@@ -338,6 +344,10 @@ func (a *ApiConfig) updatePostHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, StatusInternalServerError, "input failed validation", err)
 		return
 	}
+
+	// Sanitize input to prevent XSS attacks
+	update_post_request.Title = sanitizeInput(update_post_request.Title)
+	update_post_request.Content = sanitizeInput(update_post_request.Content)
 
 	update_params := database.UpdatePostInfoParams{
 		Title:   update_post_request.Title,

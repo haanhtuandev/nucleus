@@ -4,11 +4,32 @@ import (
 	"context"
 	"errors"
 	"math/rand/v2"
+	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
+
+// Remove all HTML tags from string to prevent XSS attacks
+func sanitizeInput(input string) string {
+	// Remove script tags and their content
+	scriptRegex := regexp.MustCompile(`(?i)<script[^>]*>.*?</script>`)
+	input = scriptRegex.ReplaceAllString(input, "")
+
+	// Remove all remaining HTML tags
+	tagRegex := regexp.MustCompile(`<[^>]*>`)
+	input = tagRegex.ReplaceAllString(input, "")
+
+	// Decode common HTML entities to prevent encoding attacks
+	input = strings.ReplaceAll(input, "&lt;", "<")
+	input = strings.ReplaceAll(input, "&gt;", ">")
+	input = strings.ReplaceAll(input, "&amp;", "&")
+	input = strings.ReplaceAll(input, "&quot;", "\"")
+	input = strings.ReplaceAll(input, "&#39;", "'")
+
+	return strings.TrimSpace(input)
+}
 
 func cleanTitle(title string) string {
 	stripped := strings.TrimSpace(title)
