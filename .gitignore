@@ -1,4 +1,45 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+blog-service
+main
+
+# Test binary
+*.test
+
+# Coverage
+*.out
+
+# Environment variables
 .env
-API_CONTRACT.md
-IMPROVEMENTS.md
-testing.http
+.env.local
+.env.production
+
+# Database backups
+blog_backup.sql
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker override
+docker-compose.override.yml
+
+# Journal/Notes
+journal/
+
+
+DEPLOYMENT.md

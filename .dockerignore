@@ -2,34 +2,24 @@
 .git
 .gitignore
 
-# Development
+# Environment
 .env
 .env.local
-.env.*.local
+.env.production
 
 # IDE
-.vscode
-.idea
-*.swp
-*.swo
-
-# Build artifacts
-blog-service
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+.vscode/
+.idea/
 
 # Test files
 *_test.go
-coverage.out
 
-# Documentation
-*.md
-docs/
+# Database backup
+blog_backup.sql
 
-# Docker
-Dockerfile
-docker-compose.yml
-.dockerignore
+# Journal/Notes
+journal/
+
+# Documentation (keep README, DEPLOYMENT.md)
+DEPLOYMENT_CHECKLIST.md
+DEPLOYMENT_SUMMARY.md

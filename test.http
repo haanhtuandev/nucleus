@@ -1,0 +1,12 @@
+###
+GET http://localhost:8080/posts
+
+###
+POST http://localhost:8080/signup
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "password": "securepassword123",
+  "bio": "Software developer from NYC"
+}

@@ -32,6 +32,12 @@ func main() {
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
+	log.Println("Running database migrations...")
+	if err := database.RunMigrations(db); err != nil {
+		log.Fatalf("Migration failed: %v", err)
+	}
+	log.Println("Migrations complete!")
+
 	// Add health check
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)

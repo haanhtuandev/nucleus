@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: blog_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bloguser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blogpassword123}
+      POSTGRES_DB: ${POSTGRES_DB:-blogdb}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bloguser} -d ${POSTGRES_DB:-blogdb}"]
+      interval: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: blog_api
+    environment:
+      DB_URL: postgres://${POSTGRES_USER:-bloguser}:${POSTGRES_PASSWORD:-blogpassword123}@db:5432/${POSTGRES_DB:-blogdb}?sslmode=disable
+      SECRET: ${SECRET:-a-very-long-secret-key-that-is-at-least-32-chars}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

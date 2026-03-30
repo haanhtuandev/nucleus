@@ -1,36 +1,38 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
-
-# Install git for fetching dependencies
-RUN apk add --no-cache git
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files first (better caching)
+# Install git for fetching dependencies (if needed)
+RUN apk add --no-cache git
+
+# Copy go mod files first for better caching
 COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy source code
 COPY . .
 
-# Build the application
-# CGO_ENABLED=0 for static binary (no C dependencies)
-# GOOS=linux for Linux containers
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /blog-service ./cmd/blog-service
+# Build the binary with optimizations
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o main ./cmd/blog-service
 
-# Final stage (minimal image)
+# Runtime stage
 FROM alpine:latest
-
-# Install CA certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-# Copy the binary from builder stage
-COPY --from=builder /blog-service .
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
+
+# Copy binary from builder
+COPY --from=builder /app/main .
 
 # Expose port
 EXPOSE 8080
 
-# Run the binary
-CMD ["./blog-service"]
+# Health check endpoint (assumes /health endpoint exists)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+
+# Run the application
+CMD ["./main"]

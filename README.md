@@ -2,197 +2,145 @@
 
 A modern, production-ready blog platform backend built with Go. Features user authentication, post management, social following system, and full-text search — all secured with rate limiting and XSS protection.
 
-![Go Version](https://img.shields.io/badge/Go-1.24-blue)
+![Go Version](https://img.shields.io/badge/Go-1.25-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 
 ---
 
-## Description
+## 🚀 Quick Start
 
-**Nucleus API** is a RESTful backend service for building blog platforms. It handles everything from user registration and authentication to creating posts, following other writers, and discovering content through search.
-
-
-
-Built with performance and security in mind, it includes:
-- JWT-based authentication with refresh tokens
-- PostgreSQL database with sqlc for type-safe queries
-- Rate limiting to prevent abuse
-- XSS protection through input sanitization
-- CORS support for frontend integration
-
----
-
-## Motivation
-
-I built Nucleus API to practice backend development fundamentals while creating something practical and production-ready. This project showcases:
-
-- **Moderately Clean Architecture** — Separation of concerns with handlers, services, and database layers
-- **Security Best Practices** — Password hashing (Argon2id), JWT validation, rate limiting, input sanitization
-- **Database Design** — Proper indexing, foreign keys, soft deletes, full-text search
-- **API Design** — RESTful endpoints, consistent error handling, pagination
-
-Without using frameworks, I had to implement many features manually, which gives me a good understanding of a lower-level backend system.
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Go 1.24+
-- PostgreSQL 16+
-- [goose](https://github.com/pressly/goose) (for migrations)
-
-### 1. Clone the Repository
+### Option 1: Docker Compose (Recommended)
 
 ```bash
 git clone https://github.com/yourusername/go-boilerplate-webservice.git
 cd go-boilerplate-webservice
+docker compose up --build
 ```
 
-### 2. Set Up Environment Variables
+**Done!** API runs on `http://localhost:8080`, PostgreSQL on `localhost:5432`.
+
+### Option 2: Manual Setup
+
+**Prerequisites:** Go 1.25+, PostgreSQL 16+
 
 ```bash
+# 1. Clone
+git clone https://github.com/yourusername/go-boilerplate-webservice.git
+cd go-boilerplate-webservice
+
+# 2. Configure
 cp .env.example .env
-```
+# Edit .env with your DB_URL, SECRET (32+ chars), ALLOWED_ORIGINS
 
-Edit `.env` with your configuration:
-
-```env
-DB_URL=postgres://user:password@localhost:5432/blogdb?sslmode=disable
-SECRET=your-super-secret-key-at-least-32-characters-long
-ALLOWED_ORIGINS=http://localhost:3000
-```
-
-### 3. Start PostgreSQL
-
-```bash
-# Using Docker
+# 3. Start PostgreSQL
 docker run -d --name blog-postgres \
   -e POSTGRES_USER=bloguser \
   -e POSTGRES_PASSWORD=blogpassword123 \
   -e POSTGRES_DB=blogdb \
   -p 5432:5432 \
   postgres:16-alpine
-```
 
-### 4. Run Database Migrations
-
-```bash
-# Install goose
-go install github.com/pressly/goose/v3/cmd/goose@latest
-
-# Run all migrations
-goose -dir sql/schema postgres "postgres://bloguser:blogpassword123@localhost:5432/blogdb?sslmode=disable" up
-```
-
-### 5. Build and Run
-
-```bash
-# Build
+# 4. Build & Run
 go build -o blog-service ./cmd/blog-service
-
-# Run
 ./blog-service
-```
-
-The API server starts on `http://localhost:8080`
-
-### 6. Test It Works
-
-```bash
-curl http://localhost:8080/health
-# Response: Service is healthy!
 ```
 
 ---
 
-## Usage
+## 📋 Features
 
-### Authentication Flow
+| Category | Features |
+|----------|----------|
+| **Authentication** | JWT access + refresh tokens, Argon2id password hashing |
+| **User Management** | Registration, login, profile management |
+| **Posts** | Create, update, delete, soft deletes, slug-based URLs |
+| **Social** | Follow/unfollow users, feed system |
+| **Search** | Full-text PostgreSQL search |
+| **Security** | Rate limiting (1000 req/hr), XSS protection, CORS, SQL injection prevention |
+| **Database** | PostgreSQL 16+, sqlc for type-safe queries, auto-migrations |
 
-#### 1. Sign Up
+---
+
+## 📖 API Endpoints
+
+### Authentication
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/signup` | Register new user | ❌ |
+| `POST` | `/login` | Login with credentials | ❌ |
+| `POST` | `/auth/refresh` | Refresh access token | ❌ |
+
+### Posts
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/me/posts` | Create post | ✅ |
+| `PUT` | `/me/posts/:id` | Update post | ✅ |
+| `DELETE` | `/me/posts/:id` | Delete post | ✅ |
+| `GET` | `/posts` | List all posts | ❌ |
+| `GET` | `/posts/:id` | Get post by ID | ❌ |
+| `GET` | `/posts/search` | Search posts | ❌ |
+
+### Users & Social
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/me/profile` | Get my profile | ✅ |
+| `GET` | `/profile/:id` | Get user profile | ❌ |
+| `GET` | `/follow/:id` | Follow user | ✅ |
+| `GET` | `/unfollow/:id` | Unfollow user | ✅ |
+
+### Health
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+
+---
+
+## 🧪 Testing the API
 
 ```bash
+# Health check
+curl http://localhost:8080/health
+
+# Sign up
 curl -X POST http://localhost:8080/signup \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "johndoe",
-    "password": "securepassword123",
-    "bio": "Software developer from NYC"
-  }'
-```
+  -d '{"username":"johndoe","password":"securepass123","bio":"Developer"}'
 
-#### 2. Login
-
-```bash
+# Login
 curl -X POST http://localhost:8080/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "johndoe",
-    "password": "securepassword123"
-  }'
-```
+  -d '{"username":"johndoe","password":"securepass123"}'
 
-**Response:**
-```json
-{
-  "id": "d050cbf9-1561-4b34-b473-17664d87838c",
-  "username": "johndoe",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "4267596a25ad90f72b5977229d9c7330..."
-}
-```
-
-#### 3. Create a Post (Authenticated)
-
-```bash
+# Create post (use token from login)
 curl -X POST http://localhost:8080/me/posts \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "title": "How I Learned Go",
-    "content": "Today I want to share my journey..."
-  }'
+  -d '{"title":"My Post","content":"Post content here"}'
+
+# Search posts
+curl "http://localhost:8080/posts/search?q=go"
 ```
 
-### Key Endpoints
-
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/signup` | Register new user | ❌ |
-| `POST` | `/login` | Authenticate user | ❌ |
-| `POST` | `/auth/refresh` | Refresh access token | ❌ |
-| `POST` | `/me/posts` | Create a post | ✅ |
-| `PUT` | `/me/posts/:id` | Update a post | ✅ |
-| `DELETE` | `/me/posts/:id` | Delete a post | ✅ |
-| `GET` | `/posts` | Get all posts | ❌ |
-| `GET` | `/posts/:slug` | Get post by slug | ❌ |
-| `GET` | `/posts/search` | Search posts | ❌ |
-| `GET` | `/me/profile` | Get my profile | ✅ |
-| `GET` | `/profile/:id` | Get user profile | ❌ |
-| `GET` | `/follow/:id` | Follow a user | ✅ |
-| `GET` | `/unfollow/:id` | Unfollow a user | ✅ |
-
-### Rate Limiting
-
-All endpoints are rate-limited to **1,000 requests per hour per IP** to prevent abuse.
+See `test.http` for more examples.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| **Language** | Go 1.24 |
+| Component | Technology |
+|-----------|------------|
+| **Language** | Go 1.25 |
 | **Database** | PostgreSQL 16 |
-| **ORM** | sqlc (type-safe SQL) |
-| **Authentication** | JWT (HS256) + Refresh Tokens |
+| **ORM** | sqlc (type-safe SQL generation) |
+| **Migrations** | goose (embedded) |
+| **Auth** | JWT (HS256) + refresh tokens |
 | **Password Hashing** | Argon2id |
-| **Migrations** | goose |
-| **Containerization** | Docker |
-| **Deployment** | Render / Railway / GCP Cloud Run |
+| **Containerization** | Docker + Docker Compose |
 
 ---
 
@@ -203,63 +151,150 @@ go-boilerplate-webservice/
 ├── cmd/
 │   └── blog-service/       # Application entry point
 ├── internal/
-│   ├── api/                # HTTP handlers, middleware, routes
-│   ├── auth/               # JWT, password hashing
-│   ├── database/           # sqlc generated code
-│   └── middleware/         # CORS, rate limiting
+│   ├── api/                # HTTP handlers, routes, middleware
+│   ├── auth/               # JWT, password hashing (Argon2id)
+│   └── database/           # sqlc generated code, migrations
 ├── sql/
-│   ├── schema/             # Database migrations
-│   └── queries/            # SQL queries for sqlc
-├── static/                 # Static files (homepage)
-├── Dockerfile              # Container configuration
-├── .env.example            # Environment template
-└── swagger.yaml            # API documentation
+│   ├── schema/             # Database migrations (001_*.sql, etc.)
+│   └── queries/            # SQL queries for sqlc generation
+├── static/                 # Static assets (homepage)
+├── .env.example            # Environment variable template
+├── docker-compose.yml      # Docker orchestration
+├── Dockerfile              # Container build instructions
+└── sqlc.yaml               # sqlc configuration
 ```
 
 ---
 
-## Security Features
+## ⚙️ Configuration
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# Database connection
+DB_URL=postgres://bloguser:blogpassword123@localhost:5432/blogdb?sslmode=disable
+
+# JWT secret (MUST be 32+ characters)
+# Generate with: openssl rand -base64 32
+SECRET=your-super-secret-key-at-least-32-characters-long
+
+# Allowed CORS origins (comma-separated)
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+```
+
+### Docker Configuration
+
+Override defaults via environment variables in `docker-compose.yml`:
+
+```bash
+# Custom secret and CORS
+SECRET=your-secret ALLOWED_ORIGINS=https://myapp.com docker compose up
+```
+
+---
+
+## 🚢 Deployment
+
+### Deploy to Render (Free Tier)
+
+1. **Push to GitHub**
+   ```bash
+   git push origin main
+   ```
+
+2. **Create PostgreSQL on Render**
+   - New → PostgreSQL → Free tier
+   - Copy **Internal Database URL**
+
+3. **Create Web Service**
+   - New → Web Service → Connect GitHub repo
+   - **Build Command:** `go build -o blog-service ./cmd/blog-service`
+   - **Start Command:** `./blog-service`
+   - **Environment Variables:**
+     ```
+     DB_URL=<paste Internal Database URL>
+     SECRET=<generate: openssl rand -base64 32>
+     ALLOWED_ORIGINS=https://your-app.onrender.com
+     ```
+
+4. **Deploy!** Your API is live at `https://your-app.onrender.com`
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed guides on:
+- Docker Compose production deployment
+- VPS deployment (DigitalOcean, Linode)
+- Google Cloud Run
+- AWS deployment
+
+---
+
+## 🔒 Security Features
 
 | Feature | Implementation |
 |---------|----------------|
 | **Password Storage** | Argon2id with memory-hard parameters |
 | **JWT Validation** | Algorithm validation (prevents alg:none attacks) |
-| **Rate Limiting** | Sliding window, per-IP tracking |
+| **Rate Limiting** | Sliding window, per-IP tracking (1000 req/hr) |
 | **XSS Prevention** | HTML tag stripping on user input |
 | **SQL Injection** | Parameterized queries via sqlc |
 | **CORS** | Configurable allowed origins |
 | **Soft Deletes** | Posts are soft-deleted (recoverable) |
 
+---
+
+## 🧪 Development
+
+### Run Tests
+
+```bash
+go test ./...
+```
+
+### Generate SQLC Code
+
+After modifying `sql/queries/*.sql`:
+
+```bash
+sqlc generate
+```
+
+### Create New Migration
+
+```bash
+# Create new migration file
+touch sql/schema/010_your_migration_name.sql
+
+# Add Up and Down sections:
+# -- +goose Up
+# CREATE TABLE ...
+#
+# -- +goose Down
+# DROP TABLE ...
+```
+
+Migrations run automatically on application startup.
 
 ---
 
+## 📄 License
 
-### Docker
+MIT License - see LICENSE file for details.
 
-```bash
-# Build image
-docker build -t blog-service .
+---
 
-# Run container
-docker run -p 8080:8080 --env-file .env blog-service
-```
+## 🤝 Contributing
 
-## Contributing
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/your-feature`)
+3. Commit changes (`git commit -m 'Add your feature'`)
+4. Push to branch (`git push origin feature/your-feature`)
+5. Open Pull Request
 
-Contributions are welcome! Here's how you can help:
+---
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
+## 📞 Support
 
-### Guidelines
-
-- Follow existing code style
-- Add tests for new features
-- Update documentation as needed
-- Keep commits atomic and well-described
-
-
-
+- **Issues:** [GitHub Issues](https://github.com/yourusername/go-boilerplate-webservice/issues)
+- **Deployment Guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
+- **API Examples:** [test.http](test.http)
