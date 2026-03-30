@@ -13,7 +13,7 @@ A modern, production-ready blog platform backend built with Go. Features user au
 ### Option 1: Docker Compose (Recommended)
 
 ```bash
-git clone https://github.com/yourusername/go-boilerplate-webservice.git
+git clone https://github.com/haanhtuandev/nucleus.git
 cd go-boilerplate-webservice
 docker compose up --build
 ```
@@ -26,7 +26,7 @@ docker compose up --build
 
 ```bash
 # 1. Clone
-git clone https://github.com/yourusername/go-boilerplate-webservice.git
+git clone https://github.com/haanhtuandev/nucleus.git
 cd go-boilerplate-webservice
 
 # 2. Configure
